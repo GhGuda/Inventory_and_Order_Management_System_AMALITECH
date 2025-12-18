@@ -52,5 +52,54 @@ FROM orders o
 JOIN order_items oi
     ON o.order_id = oi.order_id
 WHERE o.status IN ('Shipped', 'Delivered')
-GROUP BY sales_month
+GROUP BY DATE_FORMAT(o.order_date, '%Y-%m')
 ORDER BY sales_month;
+
+
+
+-- Analytical Queries (Use Window Functions):
+#Sales Rank by Category: For each product category, 
+#rank the products by their total sales revenue. 
+#The #1 product in 'Electronics', the #1 in 'Apparel', etc.
+
+SELECT
+    category,
+    product_name,
+    total_revenue,
+    RANK() OVER (
+        PARTITION BY category
+        ORDER BY total_revenue DESC
+    ) AS sales_rank
+FROM (
+    SELECT
+        p.category,
+        p.product_name,
+        SUM(oi.quantity * oi.price_at_purchase) AS total_revenue
+    FROM products p
+    JOIN order_items oi
+        ON p.product_id = oi.product_id
+    JOIN orders o
+        ON o.order_id = oi.order_id
+    WHERE o.status IN ('Shipped', 'Delivered')
+    GROUP BY p.product_id, p.category, p.product_name
+) product_sales
+ORDER BY category, sales_rank;
+
+
+
+-- Customer Order Frequency: Show a list of customers and 
+-- the date of their previous order alongside the date of 
+-- their current order. This helps analyze how frequently 
+-- customers return.
+
+SELECT
+    c.full_name AS customer_name,
+    o.order_date AS current_order_date,
+    LAG(o.order_date) OVER (
+        PARTITION BY c.customer_id
+        ORDER BY o.order_date
+    ) AS previous_order_date
+FROM customers c
+JOIN orders o
+    ON c.customer_id = o.customer_id
+ORDER BY c.customer_id, o.order_date;
