@@ -47,12 +47,19 @@ INSERT INTO orders (customer_id, total_amount, status) VALUES
 (2, 2500.00, 'Delivered'),
 (3, 15000.00, 'Pending'),
 (6, 7500.00, 'Delivered'),
+<<<<<<< HEAD
 (7, 2500.00, 'Cancelled'),
 (2, 7000.00, 'Pending'),
 (3, 15000.00, 'Delivered'),
 (4, 150.00, 'Delivered'),
 (7, 50000.00, 'Delivered'),
 (3, 300.00, 'Delivered');
+=======
+(7, 2500.00, 'Cancelled');
+SELECT * FROM orders where status = 'Delivered';
+SELECT * FROM orders where status = 'Shipped';
+
+>>>>>>> 76f952115242e75ca3354c168266b704e63cd7dd
 
 SELECT * FROM orders;
 
@@ -83,6 +90,7 @@ INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALU
 (7, 5, 3, 2500.00),
 
 -- Order 8 (2500 - Cancelled)
+<<<<<<< HEAD
 (8, 5, 1, 2500.00),
 
 -- Order 9
@@ -100,6 +108,9 @@ INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALU
 
 -- Order 13
 (13, 3, 2, 150.00);
+=======
+(8, 5, 1, 2500.00);
+>>>>>>> 76f952115242e75ca3354c168266b704e63cd7dd
 
 
 SELECT * FROM order_items;
