@@ -21,7 +21,7 @@ CREATE TABLE customers (
     full_name VARCHAR(200) NOT NULL,
     email VARCHAR(255) UNIQUE,
     phone VARCHAR(50),
-    shipping_address TEXT
+    shipping_address VARCHAR(70)
 );
 
 
