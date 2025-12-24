@@ -11,7 +11,10 @@ JOIN order_items oi ON o.order_id = oi.order_id
 WHERE o.status IN ('Shipped', 'Delivered');
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
 -- KPI 2: Top 10 Customers by Total Spending
 SELECT c.full_name AS customer_name, 
     SUM(oi.quantity * oi.price_at_purchase) AS total_amount_spent
@@ -42,7 +45,10 @@ ORDER BY total_quantity_sold DESC
 LIMIT 5;
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
 -- KPI 4: Monthly Sales Trend
 SELECT
     DATE_FORMAT(o.order_date, '%Y-%m') AS sales_month,
@@ -55,7 +61,10 @@ GROUP BY DATE_FORMAT(o.order_date, '%Y-%m')
 ORDER BY sales_month;
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
 -- ANALYTICAL QUERY 1: Sales Rank by Category
 SELECT
     category,
@@ -94,7 +103,10 @@ JOIN orders o
     ON c.customer_id = o.customer_id;
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
 -- VIEW: Customer Sales Summary
 CREATE OR REPLACE VIEW CustomerSalesSummary AS
 SELECT
@@ -110,10 +122,16 @@ WHERE o.status IN ('Shipped', 'Delivered')
 GROUP BY c.customer_id, c.full_name;
 
 
+<<<<<<< HEAD
 
 
 -- STORED PROCEDURE: Process New Order
 DROP PROCEDURE IF EXISTS ProcessNewOrder;
+=======
+-- STORED PROCEDURE: Process New Order
+DROP PROCEDURE IF EXISTS ProcessNewOrder;
+
+>>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
 CREATE PROCEDURE ProcessNewOrder(
     IN p_customers_id INT,
     IN p_product_id INT,
@@ -124,6 +142,7 @@ BEGIN
     DECLARE product_price DECIMAL(10,2);
     DECLARE new_order_id INT;
 
+<<<<<<< HEAD
     DECLARE v_sqlstate CHAR(5);
     DECLARE v_error_msg TEXT;
     
@@ -147,6 +166,8 @@ BEGIN
         );
     END;
 
+=======
+>>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
     START TRANSACTION;
 
     SELECT quantity_on_hand
@@ -178,4 +199,8 @@ BEGIN
     WHERE product_id = p_product_id;
 
     COMMIT;
+<<<<<<< HEAD
 END;
+=======
+END;
+>>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
