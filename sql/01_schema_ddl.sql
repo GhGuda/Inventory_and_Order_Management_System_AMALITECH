@@ -94,7 +94,21 @@ CREATE TABLE order_items (
 
 
 -- ============================================
--- 8. Indexes for performance
+-- 8. Error logs
+-- ============================================
+CREATE TABLE error_logs(
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    procedure_name VARCHAR(120),
+    error_msg TEXT,
+    actual_error TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+SELECT * FROM error_logs;
+
+
+-- ============================================
+-- 9. Indexes for performance
 -- ============================================
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_order_items_product_id ON order_items(product_id);
