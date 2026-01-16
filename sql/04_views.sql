@@ -1,3 +1,4 @@
+-- Create a saved result that shows how much money each customer has spent in total.
 CREATE OR REPLACE VIEW CustomerSalesSummary AS
 SELECT
     c.customer_id,

@@ -16,10 +16,7 @@
 
 
 DROP PROCEDURE IF EXISTS ProcessNewOrder;
-<<<<<<< HEAD
-=======
 
->>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
 CREATE PROCEDURE ProcessNewOrder(
     IN p_customers_id INT,
     IN p_product_id INT,
@@ -29,7 +26,6 @@ BEGIN
     DECLARE product_available INT;
     DECLARE product_price DECIMAL(10,2);
     DECLARE new_order_id INT;
-<<<<<<< HEAD
 
     DECLARE v_sqlstate CHAR(5);
     DECLARE v_error_msg TEXT;
@@ -53,8 +49,6 @@ BEGIN
             CONCAT('SQLSTATE: ', v_sqlstate, ' | ', v_error_msg)
         );
     END;
-=======
->>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
 
     START TRANSACTION;
 
@@ -88,10 +82,7 @@ BEGIN
 
     COMMIT;
 END;
-<<<<<<< HEAD
 
 
 CALL ProcessNewOrder(1,1,20);
 CALL ProcessNewOrder(2, 7, 1000);
-=======
->>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
