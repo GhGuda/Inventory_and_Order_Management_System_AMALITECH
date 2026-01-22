@@ -102,4 +102,10 @@ INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALU
 (13, 3, 2, 150.00);
 
 
+-- temp_order_items
+INSERT INTO temp_order_items (product_id, quantity) VALUES
+(1, 2),
+(3, 1),
+(5, 4);
+
 SELECT * FROM order_items;
