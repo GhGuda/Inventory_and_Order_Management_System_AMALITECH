@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS customers;
 
 
+
 -- ============================================ Customers table ============================================
 
 CREATE TABLE customers (
@@ -46,7 +47,8 @@ CREATE TABLE inventory (
     CONSTRAINT fk_inventory_product
         FOREIGN KEY (product_id)
         REFERENCES products(product_id)
-        ON DELETE CASCADE,
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
 
     CONSTRAINT uq_inventory_product UNIQUE (product_id)
 );
@@ -104,14 +106,24 @@ CREATE TABLE error_logs(
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-SELECT * FROM error_logs;
 
 
 -- ============================================
--- 9. Indexes for performance
+-- 9. Audit logs
+-- ============================================
+CREATE TABLE audit_logs (
+    audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    entity_name VARCHAR(50),
+    entity_id INT,
+    action VARCHAR(50),
+    action_details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- ============================================
+-- 10. Indexes for performance
 -- ============================================
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_order_items_product_id ON order_items(product_id);
 CREATE INDEX idx_orders_customer_id ON orders(customer_id);
-
-SHOW TABLES;

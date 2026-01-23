@@ -58,9 +58,9 @@ ORDER BY sales_month;
 
 
 -- Analytical Queries (Use Window Functions):
-#Sales Rank by Category: For each product category, 
-#rank the products by their total sales revenue. 
-#The #1 product in 'Electronics', the #1 in 'Apparel', etc.
+-- #Sales Rank by Category: For each product category, 
+-- #rank the products by their total sales revenue. 
+-- #The #1 product in 'Electronics', the #1 in 'Apparel', etc.
 
 SELECT
     category,
