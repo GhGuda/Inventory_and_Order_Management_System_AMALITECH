@@ -12,7 +12,6 @@ DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS inventory;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS customers;
-DROP TEMPORARY TABLE IF EXISTS temp_order_items;
 
 
 
@@ -123,20 +122,8 @@ CREATE TABLE audit_logs (
 
 
 -- ============================================
--- 10. Temporary table for order items
--- ============================================
-CREATE TEMPORARY TABLE temp_order_items (
-    product_id INT,
-    quantity INT
-);
-
-
-
--- ============================================
--- 11. Indexes for performance
+-- 10. Indexes for performance
 -- ============================================
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX idx_order_items_product_id ON order_items(product_id);
 CREATE INDEX idx_orders_customer_id ON orders(customer_id);
-
-SHOW TABLES;

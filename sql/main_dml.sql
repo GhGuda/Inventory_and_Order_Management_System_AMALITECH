@@ -11,10 +11,6 @@ JOIN order_items oi ON o.order_id = oi.order_id
 WHERE o.status IN ('Shipped', 'Delivered');
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 3d539cf8d3360786d699cf31cba41e04414332f6
 -- KPI 2: Top 10 Customers by Total Spending
 SELECT c.full_name AS customer_name, 
     SUM(oi.quantity * oi.price_at_purchase) AS total_amount_spent
@@ -95,64 +91,221 @@ JOIN orders o
     ON c.customer_id = o.customer_id;
 
 
+
 -- VIEW: Customer Sales Summary
-CREATE OR REPLACE VIEW CustomerSalesSummary AS
+CREATE VIEW CustomerSalesSummary AS
 SELECT
     c.customer_id,
     c.full_name AS customer_name,
-    SUM(oi.quantity * oi.price_at_purchase) AS total_amount_spent
+    COALESCE(
+        SUM(oi.quantity * oi.price_at_purchase),
+        0.00
+    ) AS total_amount_spent
 FROM customers c
 JOIN orders o
     ON c.customer_id = o.customer_id
 JOIN order_items oi
     ON o.order_id = oi.order_id
 WHERE o.status IN ('Shipped', 'Delivered')
-GROUP BY c.customer_id, c.full_name;
+GROUP BY
+    c.customer_id,
+    c.full_name;
+
 
 
 -- STORED PROCEDURE: Process New Order
-DROP PROCEDURE IF EXISTS ProcessNewOrder;
-
-CREATE PROCEDURE ProcessNewOrder(
-    IN p_customers_id INT,
-    IN p_product_id INT,
-    IN p_quantity INT
+DELIMITER $$
+CREATE PROCEDURE ProcessNewOrder_JSON(
+    IN p_customer_id INT,
+    IN p_order_items JSON
 )
 BEGIN
-    DECLARE product_available INT;
-    DECLARE product_price DECIMAL(10,2);
-    DECLARE new_order_id INT;
+    DECLARE v_order_id INT;
+    DECLARE v_total_amount DECIMAL(10,2) DEFAULT 0.00;
+    DECLARE v_item_count INT;
+    DECLARE v_idx INT DEFAULT 0;
+    DECLARE v_product_id INT;
+    DECLARE v_quantity INT;
+    DECLARE v_current_stock INT;
+    DECLARE v_product_price DECIMAL(10,2);
+    DECLARE v_error_msg VARCHAR(500);
+    DECLARE v_actual_error TEXT;
+
+    -- ==============================
+    -- Error handler (LOG + ROLLBACK)
+    -- ==============================
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        GET DIAGNOSTICS CONDITION 1
+            v_actual_error = MESSAGE_TEXT;
+
+        INSERT INTO error_logs (
+            procedure_name,
+            error_msg,
+            actual_error
+        )
+        VALUES (
+            'ProcessNewOrder_JSON',
+            v_error_msg,
+            v_actual_error
+        );
+
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+    -- Validate customer
+    IF NOT EXISTS (
+        SELECT 1 FROM Customers WHERE customer_id = p_customer_id
+    ) THEN
+        SET v_error_msg = 'Customer does not exist';
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = v_error_msg;
+    END IF;
+
+
+    -- Validate JSON
+    IF p_order_items IS NULL OR JSON_LENGTH(p_order_items) = 0 THEN
+        SET v_error_msg = 'Order must contain at least one item';
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = v_error_msg;
+    END IF;
+
+
+    SET v_item_count = JSON_LENGTH(p_order_items);
 
     START TRANSACTION;
 
-    SELECT quantity_on_hand
-    INTO product_available
-    FROM inventory
-    WHERE product_id = p_product_id;
+    SET v_idx = 0;
+    WHILE v_idx < v_item_count DO
 
-    IF product_available IS NULL OR product_available < p_quantity THEN
-        ROLLBACK;
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Low on stocks';
-    END IF;
+        SET v_product_id =
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(p_order_items, CONCAT('$[', v_idx, '].product_id'))) AS UNSIGNED);
 
-    SELECT price
-    INTO product_price
-    FROM products
-    WHERE product_id = p_product_id;
+        SET v_quantity =
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(p_order_items, CONCAT('$[', v_idx, '].quantity'))) AS UNSIGNED);
 
-    INSERT INTO orders (customer_id, total_amount)
-    VALUES (p_customers_id, product_price * p_quantity);
+        -- Validate fields
+        IF v_product_id IS NULL OR v_quantity IS NULL THEN
+            SET v_error_msg = 'Invalid order item format';
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = v_error_msg;
+        END IF;
 
-    SET new_order_id = LAST_INSERT_ID();
+        IF v_quantity <= 0 THEN
+            SET v_error_msg = CONCAT('Invalid quantity for product ', v_product_id);
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = v_error_msg;
+        END IF;
 
-    INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase)
-    VALUES (new_order_id, p_product_id, p_quantity, product_price);
+        -- Validate product exists
+        IF NOT EXISTS (
+            SELECT 1 FROM Products WHERE product_id = v_product_id
+        ) THEN
+            SET v_error_msg = CONCAT('Product does not exist: ', v_product_id);
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = v_error_msg;
+        END IF;
 
-    UPDATE inventory
-    SET quantity_on_hand = quantity_on_hand - p_quantity
-    WHERE product_id = p_product_id;
+        -- Lock inventory row
+        SELECT quantity_on_hand
+        INTO v_current_stock
+        FROM Inventory
+        WHERE product_id = v_product_id
+        FOR UPDATE;
+
+
+        IF v_current_stock IS NULL THEN
+            SET v_error_msg = CONCAT('Inventory record missing for product ', v_product_id);
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = v_error_msg;
+        END IF;
+
+        IF v_current_stock < v_quantity THEN
+            SET v_error_msg = CONCAT(
+                'Insufficient stock for product ', v_product_id,
+                '. Available=', v_current_stock,
+                ', Requested=', v_quantity
+            );
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = v_error_msg;
+        END IF;
+
+        SET v_idx = v_idx + 1;
+    END WHILE;
+
+    INSERT INTO Orders (customer_id, total_amount)
+    VALUES (p_customer_id, 0);
+
+    SET v_order_id = LAST_INSERT_ID();
+
+    SET v_idx = 0;
+
+    WHILE v_idx < v_item_count DO
+
+        SET v_product_id =
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(p_order_items, CONCAT('$[', v_idx, '].product_id'))) AS UNSIGNED);
+
+        SET v_quantity =
+            CAST(JSON_UNQUOTE(JSON_EXTRACT(p_order_items, CONCAT('$[', v_idx, '].quantity'))) AS UNSIGNED);
+
+        SELECT price
+        INTO v_product_price
+        FROM Products
+        WHERE product_id = v_product_id;
+
+        INSERT INTO Order_Items (
+            order_id,
+            product_id,
+            quantity,
+            price_at_purchase
+        )
+        VALUES (
+            v_order_id,
+            v_product_id,
+            v_quantity,
+            v_product_price
+        );
+
+
+        UPDATE Inventory
+        SET quantity_on_hand = quantity_on_hand - v_quantity
+        WHERE product_id = v_product_id;
+
+
+        SET v_total_amount =
+            v_total_amount + (v_product_price * v_quantity);
+
+        SET v_idx = v_idx + 1;
+    END WHILE;
+
+    UPDATE Orders
+    SET total_amount = v_total_amount
+    WHERE order_id = v_order_id;
 
     COMMIT;
-END;
-END;
+
+    -- ==============================
+    -- Audit log (SUCCESS)
+    -- ==============================
+    INSERT INTO audit_logs (
+        entity_name,
+        entity_id,
+        action,
+        action_details
+    )
+    VALUES (
+        'Orders',
+        v_order_id,
+        'CREATE',
+        CONCAT('Order created for customer ', p_customer_id,
+               ' with total amount ', v_total_amount)
+    );
+
+    SELECT
+        v_order_id     AS order_id,
+        v_total_amount AS total_amount,
+        v_item_count   AS items_count,
+        'Order processed successfully' AS message;
+END $$
+DELIMITER ;
